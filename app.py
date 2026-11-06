@@ -34,7 +34,7 @@ def render_pdb(file_path, style='rainbow', show_calcium=True):
         view.zoomTo()
         showmol(view, height=500, width=800)
     except FileNotFoundError:
-        st.error(f"⚠️ Missing file: {file_path}. Please upload it to your Streamlit folder.")
+        st.error(f"⚠️ Missing file: {file_path}. Please upload it using the tool above.")
 
 # ==========================================
 # TABS SETUP
@@ -76,14 +76,18 @@ with tabs[0]:
 # ==========================================
 with tabs[1]:
     st.header("Building the First Polymer Chain")
-    st.markdown("We use **RDKit** and **SMILES** (Simplified Molecular-Input Line-Entry System) to mathematically generate our 3D starting molecule.")
+    st.markdown("We use **SMILES** (Simplified Molecular-Input Line-Entry System) to mathematically generate our 3D starting molecule in our Colab pipeline.")
     
-    smiles_input = st.text_input("Enter SMILES String:", "OC1OC(C(O)=O)C(O)C(O)C1OC2OC(C(O)=O)C(O)C(O)C2...")
+    uploaded_chain = st.file_uploader("Upload Single Chain PDB (single_chain.pdb):", type=["pdb"], key="chain_upload")
     
-    if st.button("Generate 3D Chain"):
-        st.success("Successfully computed 3D atomic coordinates using ETKDG algorithm!")
-        # Renders the single chain generated from Colab
+    if uploaded_chain is not None:
+        with open("single_chain.pdb", "wb") as f:
+            f.write(uploaded_chain.getbuffer())
+        
+        st.success("Successfully loaded 3D atomic coordinates!")
         render_pdb("single_chain.pdb", style='green', show_calcium=False)
+    else:
+        st.warning("👈 Please upload your single_chain.pdb file from Colab to view the 3D molecule.")
 
 # ==========================================
 # TAB 3: HYDROGEL MATRIX
@@ -91,6 +95,8 @@ with tabs[1]:
 with tabs[2]:
     st.header("Constructing the 3D Mesh")
     st.markdown("To build the barrier, we array the single polymer chain into a grid and inject $Ca^{2+}$ ions to cross-link the structure.")
+    
+    uploaded_mesh = st.file_uploader("Upload Pre-Relaxation Mesh (Crosslinked_Hydrogel_Net_10x10.pdb):", type=["pdb"], key="mesh_upload")
     
     col1, col2 = st.columns([1, 2])
     with col1:
@@ -100,8 +106,12 @@ with tabs[2]:
         
     with col2:
         st.markdown("### Pre-Relaxation Rigid Matrix")
-        # Renders the unrelaxed mesh from Colab
-        render_pdb("Crosslinked_Hydrogel_Net_10x10.pdb", style='rainbow', show_calcium=True)
+        if uploaded_mesh is not None:
+            with open("Crosslinked_Hydrogel_Net_10x10.pdb", "wb") as f:
+                f.write(uploaded_mesh.getbuffer())
+            render_pdb("Crosslinked_Hydrogel_Net_10x10.pdb", style='rainbow', show_calcium=True)
+        else:
+            st.warning("👈 Please upload your Crosslinked Hydrogel PDB file to view the 3D matrix.")
 
 # ==========================================
 # TAB 4: THERMODYNAMICS
@@ -110,11 +120,18 @@ with tabs[3]:
     st.header("Physics Simulation: The Egg-Box Model")
     st.markdown("Applying the **Universal Force Field (UFF)** to minimize system energy. The negatively charged rainbow chains naturally wrap around the positive sky-blue calcium ions.")
     
-    if st.button("Load Final Relaxed State"):
-        with st.spinner("Loading thermodynamic coordinates..."):
-            # Renders the final relaxed hydrogel from Colab
-            render_pdb("Perfect_Hydrogel_10x10.pdb", style='rainbow', show_calcium=True)
-            st.success("Thermodynamic equilibrium achieved. The Egg-Box structures have formed.")
+    uploaded_perfect = st.file_uploader("Upload Perfect Relaxed Hydrogel (Perfect_Hydrogel_10x10.pdb):", type=["pdb"], key="perfect_upload")
+    
+    if uploaded_perfect is not None:
+        if st.button("Load Final Relaxed State"):
+            with st.spinner("Loading thermodynamic coordinates..."):
+                with open("Perfect_Hydrogel_10x10.pdb", "wb") as f:
+                    f.write(uploaded_perfect.getbuffer())
+                
+                render_pdb("Perfect_Hydrogel_10x10.pdb", style='rainbow', show_calcium=True)
+                st.success("Thermodynamic equilibrium achieved. The Egg-Box structures have formed.")
+    else:
+        st.warning("👈 Please upload your Perfect Hydrogel PDB file to run the simulation visualization.")
 
 # ==========================================
 # TAB 5: MICROPLASTIC CAPTURE PREDICTION
@@ -126,7 +143,6 @@ with tabs[4]:
     mp_size = st.number_input("Enter Microplastic Target Size (Angstroms):", value=10000, step=100)
     
     if st.button("Run Pore Analysis"):
-        # Generating a simulated representative distribution based on Colab calculations
         np.random.seed(42)
         simulated_pores = np.random.normal(loc=12.5, scale=2.0, size=500)
         max_pore = np.max(simulated_pores)
